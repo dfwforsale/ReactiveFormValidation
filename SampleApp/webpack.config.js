@@ -3,7 +3,7 @@ const path = require("path");
 /** @type {import('webpack').Configuration} */
 module.exports = {
   entry: {
-    validationInterop: "./main.ts", // ✅ your actual entry file
+     validationInterop: path.resolve(__dirname, "main.ts"),
   },
   mode: "development",
   output: {

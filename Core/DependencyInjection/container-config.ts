@@ -1,6 +1,6 @@
 
 import { Container } from "inversify";
-import "reflect-metadata";
+
 import { ContainerTypes } from "../Types/ContainerTypes";
 import { IFormParserService } from "../Interfaces/IFormParserService";
 import { FormParserService } from "../../Services/FormParserService";
@@ -34,6 +34,8 @@ import { IReactiveFormService } from "../Interfaces/IReactiveFormService";
 import { ReactiveFormService } from "../../Services/ReactiveFormService";
 import { IReactiveValidatorService } from "../Interfaces/IReactiveValidatorService";
 import { ReactiveValidatorService } from "../../Services/ReactiveValidatorService";
+import { IFormBinderBootstrapper } from "../Interfaces/IFormBinderBoostrapper";
+import { FormBinderBootstrapper } from "../Bootstrapper/FormBinderBoostrapper";
 
 
 // Init container
@@ -59,7 +61,7 @@ container.bind<IAsyncValidationHandler>(ContainerTypes.HttpValidationHandler).to
 
 // Factories
 container.bind<AsyncValidatorFactory>(ContainerTypes.AsyncValidatorFactory).to(AsyncValidatorFactory).inSingletonScope();
-container.bind<AsyncValidatorFactory>(ContainerTypes.AsyncValidatorFactory).to(AsyncValidatorFactory).inSingletonScope();
+
 
 container.bind<IFormControlFactory>(ContainerTypes.FormControlFactory).to(FormControlFactory).inSingletonScope();
 container.bind<IReactiveFormControlFactory>(ContainerTypes.ReactiveFormControlFactory).to(ReactiveFormControlFactory).inSingletonScope();
@@ -70,6 +72,8 @@ container.bind<IFormGroupFactory>(ContainerTypes.FormGroupFactory).to(FormGroupF
 container.bind<IReactiveFormService>(ContainerTypes.ReactiveFormService).to(ReactiveFormService).inSingletonScope();
 container.bind<IReactiveValidatorService>(ContainerTypes.ReactiveValidatorService).to(ReactiveValidatorService).inSingletonScope();
 
-// Export the configured container
+
+// Bootstrapper (deferred binding to avoid circular dependency issues)
+container.bind<IFormBinderBootstrapper>(ContainerTypes.FormBinderBootstrapper).to(FormBinderBootstrapper).inSingletonScope();
 
 export { container };

@@ -4,6 +4,9 @@ import { IReactiveFormGroup } from "./IReactiveFormGroup";
 import { IValidator } from "./IValidator";
 
 export interface IReactiveFormControl {
+  error$: any;
+  state$: any;
+  value$: any;
   initialize(
     key: string,
     validators: IValidator[],

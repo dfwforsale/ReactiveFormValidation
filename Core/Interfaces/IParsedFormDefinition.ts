@@ -1,7 +1,12 @@
 // Core/Interfaces/IParsedFormDefinition.ts
-import { IParsedControlDefinition } from "./IParsedControlDefinition";
+
+import { IValidationRuleConfig } from "./IValidationRuleConfig";
 
 export interface IParsedFormDefinition {
-  form: HTMLFormElement;
-  controls: IParsedControlDefinition[];
+  controls: Array<{
+    key: string;
+    rules: any;
+    input: HTMLInputElement | null;
+  }>;
+  form: HTMLFormElement | null;
 }

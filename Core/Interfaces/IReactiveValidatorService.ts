@@ -20,6 +20,11 @@ export interface IReactiveValidatorService {
   registerForm(form: HTMLFormElement): IReactiveFormGroup;
 
   /**
+   * Registers a form group based on a model with metadata decorators.
+   */
+  registerFormFromModel(model: object): IReactiveFormGroup;
+
+  /**
    * Validates the entire form group.
    */
   validateForm(group: IReactiveFormGroup): Promise<boolean>;

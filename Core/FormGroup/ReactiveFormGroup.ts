@@ -21,7 +21,9 @@ export class ReactiveFormGroup implements IReactiveFormGroup {
   getControl(key: string): IReactiveFormControl | undefined {
     return this.controls.get(key);
   }
-
+  getControlKeys(): string[] {
+    return Array.from(this.controls.keys());
+  }
   getValue(): Record<string, string> {
     const result: Record<string, string> = {};
     for (const [key, control] of this.controls.entries()) {
@@ -32,21 +34,21 @@ export class ReactiveFormGroup implements IReactiveFormGroup {
 
   async validateAll(): Promise<boolean> {
     const results = await Promise.all(
-      Array.from(this.controls.values()).map(c => c.validate())
+      Array.from(this.controls.values()).map((c) => c.validate())
     );
-    return results.every(result => result === true);
+    return results.every((result) => result === true);
   }
 
   isValid(): boolean {
-    return Array.from(this.controls.values()).every(c => c.isValid());
+    return Array.from(this.controls.values()).every((c) => c.isValid());
   }
 
   isDirty(): boolean {
-    return Array.from(this.controls.values()).some(c => c.isDirty());
+    return Array.from(this.controls.values()).some((c) => c.isDirty());
   }
 
   wasTouched(): boolean {
-    return Array.from(this.controls.values()).some(c => c.wasTouched());
+    return Array.from(this.controls.values()).some((c) => c.wasTouched());
   }
 
   onDebugUpdate(callback: (debugState: ReactiveFormDebugState) => void): void {
@@ -62,7 +64,7 @@ export class ReactiveFormGroup implements IReactiveFormGroup {
       values: {},
       states: {},
       errors: {},
-      raw: {}
+      raw: {},
     };
 
     for (const [key, control] of this.controls.entries()) {

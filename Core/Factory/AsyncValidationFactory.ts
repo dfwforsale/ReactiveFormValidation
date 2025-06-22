@@ -9,7 +9,7 @@ import { IAsyncValidationHandler } from "../Interfaces/IAsyncValidationHandler";
 
 
 
-@injectable()
+
 @injectable()
 export class AsyncValidatorFactory implements IAsyncValidatorFactory {
   constructor(

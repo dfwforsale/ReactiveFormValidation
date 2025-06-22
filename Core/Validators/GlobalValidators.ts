@@ -64,6 +64,14 @@ export class MatchesValidator implements IValidator {
     };
   }
 }
+export class EmailValidator implements IValidator {
+  constructor(private rule: IValidationRuleConfig) {}
 
+  validate(value: string): boolean | { isValid: boolean; message?: string } {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValid = emailPattern.test(value);
+    return isValid || { isValid: false, message: this.rule.message || "Invalid email address." };
+  }
+}
 
 

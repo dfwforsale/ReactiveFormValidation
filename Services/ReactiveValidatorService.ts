@@ -7,6 +7,9 @@ import { IReactiveFormControl } from "../Core/Interfaces/IReactiveFormControl";
 import { IReactiveFormGroup } from "../Core/Interfaces/IReactiveFormGroup";
 import { IValidationRuleConfig } from "../Core/Interfaces/IValidationRuleConfig";
 import { ContainerTypes } from "../Core/Types/ContainerTypes";
+import { parseModelToFormDefinition } from "../Core/Utils/ModelParser";
+import { IFormBinderBootstrapper } from "../Core/Interfaces/IFormBinderBoostrapper";
+
 
 @injectable()
 export class ReactiveValidatorService implements IReactiveValidatorService {
@@ -20,7 +23,10 @@ export class ReactiveValidatorService implements IReactiveValidatorService {
     private controlFactory: IFormControlFactory,
 
     @inject(ContainerTypes.FormGroupFactory)
-    private groupFactory: IFormGroupFactory
+    private groupFactory: IFormGroupFactory,
+
+    @inject(ContainerTypes.FormBinderBootstrapper)
+    private binder: IFormBinderBootstrapper
   ) {}
 
   createControlFromRules(
@@ -38,6 +44,11 @@ export class ReactiveValidatorService implements IReactiveValidatorService {
     const group = this.groupFactory.create(def);
     this.formRegistry.set(form, group);
     return group;
+  }
+
+  registerFormFromModel(model: object): IReactiveFormGroup {
+    const def = parseModelToFormDefinition(model);
+    return this.groupFactory.create(def);
   }
 
   async validateForm(group: IReactiveFormGroup): Promise<boolean> {

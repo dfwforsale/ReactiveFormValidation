@@ -1,6 +1,160 @@
 
 /******/ var __webpack_modules__ = ({
 
+/***/ "../Core/Bootstrapper/FormBinderBoostrapper.ts":
+/*!*****************************************************!*\
+  !*** ../Core/Bootstrapper/FormBinderBoostrapper.ts ***!
+  \*****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   FormBinderBootstrapper: () => (/* binding */ FormBinderBootstrapper)
+/* harmony export */ });
+/* harmony import */ var inversify__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! inversify */ "../node_modules/inversify/lib/esm/index.js");
+var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+
+let FormBinderBootstrapper = class FormBinderBootstrapper {
+    bind(formDef, group) {
+        throw new Error("Method not implemented.");
+    }
+    bindControlsToInputs(form, controlMap) {
+        for (const [key, control] of controlMap.entries()) {
+            const input = form.elements.namedItem(key);
+            if (!input) {
+                console.warn(`[FormBinderBootstrapper] No input found for: ${key}`);
+                continue;
+            }
+            // Sync input -> control
+            input.addEventListener("input", () => {
+                control.setValue(input.value);
+            });
+            input.addEventListener("blur", () => {
+                control.markAsTouched();
+                control.validate(); // Optional: eager validation on blur
+            });
+            // Sync control -> input
+            control.value$.subscribe((val) => {
+                if (input.value !== val)
+                    input.value = val;
+            });
+            control.state$.subscribe((state) => {
+                input.setAttribute("data-state", state);
+            });
+            control.error$.subscribe((msg) => {
+                const status = document.getElementById(`${input.id}Status`);
+                if (status) {
+                    status.textContent = msg || "";
+                    status.className = msg ? "error" : "";
+                }
+            });
+        }
+    }
+};
+FormBinderBootstrapper = __decorate([
+    (0,inversify__WEBPACK_IMPORTED_MODULE_0__.injectable)()
+], FormBinderBootstrapper);
+
+
+
+/***/ }),
+
+/***/ "../Core/Bootstrapper/ReactiveFormBootstrapper.ts":
+/*!********************************************************!*\
+  !*** ../Core/Bootstrapper/ReactiveFormBootstrapper.ts ***!
+  \********************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ReactiveFormBootstrapper: () => (/* binding */ ReactiveFormBootstrapper)
+/* harmony export */ });
+/* harmony import */ var _DependencyInjection_container_config__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../DependencyInjection/container-config */ "../Core/DependencyInjection/container-config.ts");
+/* harmony import */ var _Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Types/ContainerTypes */ "../Core/Types/ContainerTypes.ts");
+
+
+class ReactiveFormBootstrapper {
+    formId;
+    service = null;
+    constructor(formId) {
+        this.formId = formId;
+    }
+    bootstrap() {
+        const formElement = document.getElementById(this.formId);
+        if (!formElement) {
+            console.error(`[Bootstrapper] ❌ Could not find form with id: ${this.formId}`);
+            return;
+        }
+        try {
+            this.service = _DependencyInjection_container_config__WEBPACK_IMPORTED_MODULE_0__.container.get(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ReactiveValidatorService);
+        }
+        catch (err) {
+            console.error("[Bootstrapper] ❌ DI resolution failed for IReactiveValidatorService:", err);
+            return;
+        }
+        const group = this.service.registerForm(formElement);
+        // ---- CRITICAL: Bind inputs to controls ----
+        // Assuming group has a method getControlKeys(): string[]
+        for (const key of (typeof group.getControlKeys === "function" ? group.getControlKeys() : [])) {
+            const control = group.getControl(key);
+            // Prefer by name, fallback to id
+            const input = formElement.querySelector(`[name='${key}'], [id='${key}']`);
+            if (!control || !input)
+                continue;
+            // Set initial control value from DOM
+            control.setValue(input.value);
+            // Wire input event to update control value
+            input.addEventListener("input", (e) => {
+                control.setValue(e.target.value);
+            });
+            // Wire blur event to mark as touched
+            input.addEventListener("blur", () => {
+                control.markAsTouched();
+            });
+            // Optional: live feedback with CSS class
+            control.onErrorChange((msg) => {
+                input.classList.toggle("is-invalid", !!msg);
+            });
+        }
+        // ✅ Subscribe to real-time debug output
+        group.onDebugUpdate((debugState) => {
+            console.log("[Bootstrapper] 🐞 Debug Update:", JSON.stringify(debugState, null, 2));
+        });
+        formElement.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            let isValid = false;
+            try {
+                isValid = await this.service.validateForm(group);
+            }
+            catch (err) {
+                console.error("[Bootstrapper] 🚨 Validation error:", err);
+                return;
+            }
+            console.log("[Bootstrapper] ✅ Form valid?", isValid);
+            if (!isValid) {
+                console.warn("[Bootstrapper] 🚫 Form submission blocked due to validation errors.");
+                return;
+            }
+            // 🔥 Replace with real backend integration
+            try {
+                console.log("[Bootstrapper] 📨 Submitting form with values:", group.getValue());
+                // await sendToBackend(group.getValue()); // <--- your real backend call goes here
+            }
+            catch (err) {
+                console.error("[Bootstrapper] ❌ Form submission failed:", err);
+            }
+        });
+    }
+}
+
+
+/***/ }),
+
 /***/ "../Core/Builders/ReactiveFormBuilder.ts":
 /*!***********************************************!*\
   !*** ../Core/Builders/ReactiveFormBuilder.ts ***!
@@ -76,24 +230,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   container: () => (/* binding */ container)
 /* harmony export */ });
 /* harmony import */ var inversify__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! inversify */ "../node_modules/inversify/lib/esm/index.js");
-/* harmony import */ var reflect_metadata__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! reflect-metadata */ "../node_modules/reflect-metadata/Reflect.js");
-/* harmony import */ var reflect_metadata__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(reflect_metadata__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../Types/ContainerTypes */ "../Core/Types/ContainerTypes.ts");
-/* harmony import */ var _Services_FormParserService__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../Services/FormParserService */ "../Services/FormParserService.ts");
-/* harmony import */ var _Providers_FormStateProvider__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../Providers/FormStateProvider */ "../Core/Providers/FormStateProvider.ts");
-/* harmony import */ var _FormGroup_ReactiveFormGroup__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../FormGroup/ReactiveFormGroup */ "../Core/FormGroup/ReactiveFormGroup.ts");
-/* harmony import */ var _FormControl_ReactiveFormControl__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../FormControl/ReactiveFormControl */ "../Core/FormControl/ReactiveFormControl.ts");
-/* harmony import */ var _Providers_SignalRConnectionProvider__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../Providers/SignalRConnectionProvider */ "../Core/Providers/SignalRConnectionProvider.ts");
-/* harmony import */ var _Handlers_HttpValidationHandler__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../Handlers/HttpValidationHandler */ "../Core/Handlers/HttpValidationHandler.ts");
-/* harmony import */ var _Handlers_SignalRValidationHandler__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../Handlers/SignalRValidationHandler */ "../Core/Handlers/SignalRValidationHandler.ts");
-/* harmony import */ var _Factory_AsyncValidationFactory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../Factory/AsyncValidationFactory */ "../Core/Factory/AsyncValidationFactory.ts");
-/* harmony import */ var _Factory_FormControlFactory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../Factory/FormControlFactory */ "../Core/Factory/FormControlFactory.ts");
-/* harmony import */ var _Factory_ValidatorFactory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../Factory/ValidatorFactory */ "../Core/Factory/ValidatorFactory.ts");
-/* harmony import */ var _Factory_ReactiveFormControlFactory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../Factory/ReactiveFormControlFactory */ "../Core/Factory/ReactiveFormControlFactory.ts");
-/* harmony import */ var _Factory_FormGroupFactory__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../Factory/FormGroupFactory */ "../Core/Factory/FormGroupFactory.ts");
-/* harmony import */ var _Builders_ReactiveFormBuilder__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../Builders/ReactiveFormBuilder */ "../Core/Builders/ReactiveFormBuilder.ts");
-/* harmony import */ var _Services_ReactiveFormService__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../../Services/ReactiveFormService */ "../Services/ReactiveFormService.ts");
-/* harmony import */ var _Services_ReactiveValidatorService__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../../Services/ReactiveValidatorService */ "../Services/ReactiveValidatorService.ts");
+/* harmony import */ var _Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Types/ContainerTypes */ "../Core/Types/ContainerTypes.ts");
+/* harmony import */ var _Services_FormParserService__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../Services/FormParserService */ "../Services/FormParserService.ts");
+/* harmony import */ var _Providers_FormStateProvider__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Providers/FormStateProvider */ "../Core/Providers/FormStateProvider.ts");
+/* harmony import */ var _FormGroup_ReactiveFormGroup__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../FormGroup/ReactiveFormGroup */ "../Core/FormGroup/ReactiveFormGroup.ts");
+/* harmony import */ var _FormControl_ReactiveFormControl__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../FormControl/ReactiveFormControl */ "../Core/FormControl/ReactiveFormControl.ts");
+/* harmony import */ var _Providers_SignalRConnectionProvider__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../Providers/SignalRConnectionProvider */ "../Core/Providers/SignalRConnectionProvider.ts");
+/* harmony import */ var _Handlers_HttpValidationHandler__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../Handlers/HttpValidationHandler */ "../Core/Handlers/HttpValidationHandler.ts");
+/* harmony import */ var _Handlers_SignalRValidationHandler__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../Handlers/SignalRValidationHandler */ "../Core/Handlers/SignalRValidationHandler.ts");
+/* harmony import */ var _Factory_AsyncValidationFactory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../Factory/AsyncValidationFactory */ "../Core/Factory/AsyncValidationFactory.ts");
+/* harmony import */ var _Factory_FormControlFactory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../Factory/FormControlFactory */ "../Core/Factory/FormControlFactory.ts");
+/* harmony import */ var _Factory_ValidatorFactory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../Factory/ValidatorFactory */ "../Core/Factory/ValidatorFactory.ts");
+/* harmony import */ var _Factory_ReactiveFormControlFactory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../Factory/ReactiveFormControlFactory */ "../Core/Factory/ReactiveFormControlFactory.ts");
+/* harmony import */ var _Factory_FormGroupFactory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../Factory/FormGroupFactory */ "../Core/Factory/FormGroupFactory.ts");
+/* harmony import */ var _Builders_ReactiveFormBuilder__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../Builders/ReactiveFormBuilder */ "../Core/Builders/ReactiveFormBuilder.ts");
+/* harmony import */ var _Services_ReactiveFormService__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../../Services/ReactiveFormService */ "../Services/ReactiveFormService.ts");
+/* harmony import */ var _Services_ReactiveValidatorService__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../../Services/ReactiveValidatorService */ "../Services/ReactiveValidatorService.ts");
+/* harmony import */ var _Bootstrapper_FormBinderBoostrapper__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../Bootstrapper/FormBinderBoostrapper */ "../Core/Bootstrapper/FormBinderBoostrapper.ts");
 
 
 
@@ -115,31 +268,31 @@ __webpack_require__.r(__webpack_exports__);
 // Init container
 const container = new inversify__WEBPACK_IMPORTED_MODULE_0__.Container();
 // Parser
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.FormParserService).to(_Services_FormParserService__WEBPACK_IMPORTED_MODULE_3__.FormParserService);
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormParserService).to(_Services_FormParserService__WEBPACK_IMPORTED_MODULE_2__.FormParserService);
 // State Provider (dual-interface binding)
-container.bind(_Providers_FormStateProvider__WEBPACK_IMPORTED_MODULE_4__.FormStateProvider).toSelf().inSingletonScope();
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.FieldStateProvider).toService(_Providers_FormStateProvider__WEBPACK_IMPORTED_MODULE_4__.FormStateProvider);
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.FormStateProvider).toService(_Providers_FormStateProvider__WEBPACK_IMPORTED_MODULE_4__.FormStateProvider);
+container.bind(_Providers_FormStateProvider__WEBPACK_IMPORTED_MODULE_3__.FormStateProvider).toSelf().inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FieldStateProvider).toService(_Providers_FormStateProvider__WEBPACK_IMPORTED_MODULE_3__.FormStateProvider);
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormStateProvider).toService(_Providers_FormStateProvider__WEBPACK_IMPORTED_MODULE_3__.FormStateProvider);
 // Builders
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.ReactiveFormBuilder).to(_Builders_ReactiveFormBuilder__WEBPACK_IMPORTED_MODULE_15__.ReactiveFormBuilder).inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ReactiveFormBuilder).to(_Builders_ReactiveFormBuilder__WEBPACK_IMPORTED_MODULE_14__.ReactiveFormBuilder).inSingletonScope();
 // Reactive controls
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.ReactiveFormControl).to(_FormControl_ReactiveFormControl__WEBPACK_IMPORTED_MODULE_6__.ReactiveFormControl);
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.ReactiveFormGroup).to(_FormGroup_ReactiveFormGroup__WEBPACK_IMPORTED_MODULE_5__.ReactiveFormGroup);
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ReactiveFormControl).to(_FormControl_ReactiveFormControl__WEBPACK_IMPORTED_MODULE_5__.ReactiveFormControl);
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ReactiveFormGroup).to(_FormGroup_ReactiveFormGroup__WEBPACK_IMPORTED_MODULE_4__.ReactiveFormGroup);
 // Validator Handlers
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.SignalRConnectionProvider).to(_Providers_SignalRConnectionProvider__WEBPACK_IMPORTED_MODULE_7__.SignalRConnectionProvider).inSingletonScope();
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.SignalRValidationHandler).to(_Handlers_SignalRValidationHandler__WEBPACK_IMPORTED_MODULE_9__.SignalRValidationHandler);
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.HttpValidationHandler).to(_Handlers_HttpValidationHandler__WEBPACK_IMPORTED_MODULE_8__.HttpValidationHandler);
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.SignalRConnectionProvider).to(_Providers_SignalRConnectionProvider__WEBPACK_IMPORTED_MODULE_6__.SignalRConnectionProvider).inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.SignalRValidationHandler).to(_Handlers_SignalRValidationHandler__WEBPACK_IMPORTED_MODULE_8__.SignalRValidationHandler);
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.HttpValidationHandler).to(_Handlers_HttpValidationHandler__WEBPACK_IMPORTED_MODULE_7__.HttpValidationHandler);
 // Factories
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.AsyncValidatorFactory).to(_Factory_AsyncValidationFactory__WEBPACK_IMPORTED_MODULE_10__.AsyncValidatorFactory).inSingletonScope();
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.AsyncValidatorFactory).to(_Factory_AsyncValidationFactory__WEBPACK_IMPORTED_MODULE_10__.AsyncValidatorFactory).inSingletonScope();
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.FormControlFactory).to(_Factory_FormControlFactory__WEBPACK_IMPORTED_MODULE_11__.FormControlFactory).inSingletonScope();
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.ReactiveFormControlFactory).to(_Factory_ReactiveFormControlFactory__WEBPACK_IMPORTED_MODULE_13__.ReactiveFormControlFactory).inSingletonScope();
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.ValidatorFactory).to(_Factory_ValidatorFactory__WEBPACK_IMPORTED_MODULE_12__.ValidatorFactory).inSingletonScope();
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.FormGroupFactory).to(_Factory_FormGroupFactory__WEBPACK_IMPORTED_MODULE_14__.FormGroupFactory).inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.AsyncValidatorFactory).to(_Factory_AsyncValidationFactory__WEBPACK_IMPORTED_MODULE_9__.AsyncValidatorFactory).inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormControlFactory).to(_Factory_FormControlFactory__WEBPACK_IMPORTED_MODULE_10__.FormControlFactory).inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ReactiveFormControlFactory).to(_Factory_ReactiveFormControlFactory__WEBPACK_IMPORTED_MODULE_12__.ReactiveFormControlFactory).inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ValidatorFactory).to(_Factory_ValidatorFactory__WEBPACK_IMPORTED_MODULE_11__.ValidatorFactory).inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormGroupFactory).to(_Factory_FormGroupFactory__WEBPACK_IMPORTED_MODULE_13__.FormGroupFactory).inSingletonScope();
 // Services
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.ReactiveFormService).to(_Services_ReactiveFormService__WEBPACK_IMPORTED_MODULE_16__.ReactiveFormService).inSingletonScope();
-container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.ReactiveValidatorService).to(_Services_ReactiveValidatorService__WEBPACK_IMPORTED_MODULE_17__.ReactiveValidatorService).inSingletonScope();
-// Export the configured container
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ReactiveFormService).to(_Services_ReactiveFormService__WEBPACK_IMPORTED_MODULE_15__.ReactiveFormService).inSingletonScope();
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ReactiveValidatorService).to(_Services_ReactiveValidatorService__WEBPACK_IMPORTED_MODULE_16__.ReactiveValidatorService).inSingletonScope();
+// Bootstrapper (deferred binding to avoid circular dependency issues)
+container.bind(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormBinderBootstrapper).to(_Bootstrapper_FormBinderBoostrapper__WEBPACK_IMPORTED_MODULE_17__.FormBinderBootstrapper).inSingletonScope();
 
 
 
@@ -201,7 +354,6 @@ let AsyncValidatorFactory = class AsyncValidatorFactory {
     }
 };
 AsyncValidatorFactory = __decorate([
-    (0,inversify__WEBPACK_IMPORTED_MODULE_0__.injectable)(),
     (0,inversify__WEBPACK_IMPORTED_MODULE_0__.injectable)(),
     __param(0, (0,inversify__WEBPACK_IMPORTED_MODULE_0__.inject)(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.SignalRValidationHandler)),
     __param(1, (0,inversify__WEBPACK_IMPORTED_MODULE_0__.inject)(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.HttpValidationHandler)),
@@ -384,7 +536,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   ValidatorFactory: () => (/* binding */ ValidatorFactory)
 /* harmony export */ });
 /* harmony import */ var inversify__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! inversify */ "../node_modules/inversify/lib/esm/index.js");
-/* harmony import */ var _Validators_RequiredValidator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Validators/RequiredValidator */ "../Core/Validators/RequiredValidator.ts");
+/* harmony import */ var _Validators_GlobalValidators__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Validators/GlobalValidators */ "../Core/Validators/GlobalValidators.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -396,21 +548,31 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 let ValidatorFactory = class ValidatorFactory {
     createValidators(rules) {
         return rules
+            .filter(rule => this.isSyncValidator(rule.type))
             .map((rule) => this.createValidator(rule))
             .filter((v) => v !== null);
+    }
+    isSyncValidator(type) {
+        return [
+            "required",
+            "minLength",
+            "maxLength",
+            "pattern",
+            "email"
+        ].includes(type);
     }
     createValidator(rule) {
         switch (rule.type) {
             case "required":
-                return new _Validators_RequiredValidator__WEBPACK_IMPORTED_MODULE_1__.RequiredValidator(rule);
+                return new _Validators_GlobalValidators__WEBPACK_IMPORTED_MODULE_1__.RequiredValidator(rule);
             case "minLength":
-                return new _Validators_RequiredValidator__WEBPACK_IMPORTED_MODULE_1__.MinLengthValidator(rule);
+                return new _Validators_GlobalValidators__WEBPACK_IMPORTED_MODULE_1__.MinLengthValidator(rule);
             case "maxLength":
-                return new _Validators_RequiredValidator__WEBPACK_IMPORTED_MODULE_1__.MaxLengthValidator(rule);
+                return new _Validators_GlobalValidators__WEBPACK_IMPORTED_MODULE_1__.MaxLengthValidator(rule);
             case "pattern":
-                return new _Validators_RequiredValidator__WEBPACK_IMPORTED_MODULE_1__.PatternValidator(rule);
-            case "matches":
-                return new _Validators_RequiredValidator__WEBPACK_IMPORTED_MODULE_1__.MatchesValidator(rule);
+                return new _Validators_GlobalValidators__WEBPACK_IMPORTED_MODULE_1__.PatternValidator(rule);
+            case "email":
+                return new _Validators_GlobalValidators__WEBPACK_IMPORTED_MODULE_1__.EmailValidator(rule);
             default:
                 console.warn(`[ValidatorFactory] Unknown validator type: ${rule.type}`);
                 return null;
@@ -437,8 +599,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var inversify__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! inversify */ "../node_modules/inversify/lib/esm/index.js");
 /* harmony import */ var _Utils_SimpleSubject__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Utils/SimpleSubject */ "../Core/Utils/SimpleSubject.ts");
-/* harmony import */ var _Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../Types/ContainerTypes */ "../Core/Types/ContainerTypes.ts");
-/* harmony import */ var _Utils_Debounce__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Utils/Debounce */ "../Core/Utils/Debounce.ts");
+/* harmony import */ var _Utils_Debounce__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../Utils/Debounce */ "../Core/Utils/Debounce.ts");
+/* harmony import */ var _Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Types/ContainerTypes */ "../Core/Types/ContainerTypes.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -459,23 +621,26 @@ let ReactiveFormControl = class ReactiveFormControl {
     stateProvider;
     key;
     value = "";
-    state = "idle";
-    errorMessage = null;
     dirty = false;
     touched = false;
     validatedOnce = false;
+    state = "idle";
+    errorMessage = null;
     validators = [];
     asyncValidators = [];
+    formGroup;
     currentRunId = 0;
     lastValidatedValue = null;
-    formGroup;
     value$ = new _Utils_SimpleSubject__WEBPACK_IMPORTED_MODULE_1__.SimpleSubject();
     error$ = new _Utils_SimpleSubject__WEBPACK_IMPORTED_MODULE_1__.SimpleSubject();
     state$ = new _Utils_SimpleSubject__WEBPACK_IMPORTED_MODULE_1__.SimpleSubject();
     debouncer;
     constructor(stateProvider) {
         this.stateProvider = stateProvider;
-        this.debouncer = new _Utils_Debounce__WEBPACK_IMPORTED_MODULE_3__.Debouncer(this.updateValueDebounced.bind(this), 300);
+        this.debouncer = new _Utils_Debounce__WEBPACK_IMPORTED_MODULE_2__.Debouncer(this.handleDebouncedValue.bind(this), 300);
+    }
+    updateValueDebounced(value) {
+        throw new Error("Method not implemented.");
     }
     initialize(key, validators, asyncValidators = []) {
         this.key = key;
@@ -494,44 +659,30 @@ let ReactiveFormControl = class ReactiveFormControl {
     onStateChange(cb) {
         this.state$.subscribe(cb);
     }
-    async setValue(val) {
-        if (val === this.value)
+    async setValue(newVal) {
+        if (newVal === this.value)
             return;
-        this.value = val;
+        this.value = newVal;
         this.dirty = true;
-        this.emitValue(val);
-        this.emitDirtyTouched();
+        this.emit("value", newVal);
+        this.emitState();
         if (this.touched) {
-            this.debouncer.run(val);
-        }
-    }
-    updateValueDebounced(val) {
-        if (val === this.value)
-            return;
-        this.value = val;
-        this.dirty = true;
-        this.emitValue(val);
-        this.emitDirtyTouched();
-        if (this.touched) {
-            this.debouncer.run(val);
+            this.debouncer.run(newVal);
         }
     }
     async markAsTouched() {
         if (!this.touched) {
             this.touched = true;
-            this.emitDirtyTouched();
-            if (this.dirty || !this.validatedOnce) {
-                await this.validateInternal(this.value, true);
-            }
+            this.emitState();
+            await this.validate();
         }
     }
-    validate() {
-        this.touched = true;
+    async validate() {
         this.validatedOnce = true;
-        this.emitDirtyTouched();
-        return this.validateInternal(this.value, true);
+        this.touched = true;
+        return await this.validateInternal(this.value);
     }
-    validateNow() {
+    async validateNow() {
         return this.validate();
     }
     setValidationRules(validators, asyncValidators = []) {
@@ -544,26 +695,49 @@ let ReactiveFormControl = class ReactiveFormControl {
     async setServerValidationState(result) {
         this.validatedOnce = true;
         this.touched = true;
-        this.setState(result.state);
-        this.setError(result.state === "valid" ? null : result.message || "Invalid input");
+        this.setState(result.state, result.message ?? null);
     }
-    // --- Observables + Emitters ---
-    emitValue(val) {
-        this.value$.next(val);
-        this.emitState();
+    // ----------------
+    // Private Helpers
+    // ----------------
+    async validateInternal(val) {
+        const runId = ++this.currentRunId;
+        const context = this.formGroup?.getValue() ?? { [this.key]: val };
+        // Required shortcut (first)
+        if (val.trim() === "") {
+            this.setState("invalid", "Field is required.");
+            return false;
+        }
+        // Sync Validators
+        for (const validator of this.validators) {
+            const res = await Promise.resolve(validator.validate(val, context));
+            const result = typeof res === "boolean" ? { isValid: res } : res;
+            if (!result.isValid) {
+                this.setState("invalid", result.message ?? "Invalid input");
+                return false;
+            }
+        }
+        // Async Validators
+        if (this.asyncValidators.length > 0 && this.lastValidatedValue !== val) {
+            this.setState("validating", null);
+            for (const validator of this.asyncValidators) {
+                const result = await validator.validate(val, context);
+                if (this.currentRunId !== runId)
+                    return false;
+                if (!result.isValid) {
+                    this.setState("invalid", result.message ?? "Invalid input");
+                    return false;
+                }
+            }
+            this.lastValidatedValue = val;
+        }
+        this.setState("valid", null);
+        return true;
     }
-    setError(msg) {
-        this.errorMessage = msg;
-        this.error$.next(msg);
-        this.emitState();
-    }
-    setState(state) {
-        this.state = state;
-        this.state$.next(state);
-        this.emitState();
-    }
-    emitDirtyTouched() {
-        this.emitState();
+    emit(type, val) {
+        if (type === "value") {
+            this.value$.next(val);
+        }
     }
     emitState() {
         const state = {
@@ -575,56 +749,24 @@ let ReactiveFormControl = class ReactiveFormControl {
             touched: this.touched,
         };
         this.stateProvider.updateFieldState(state);
+        this.state$.next(this.state);
+        this.error$.next(this.errorMessage);
     }
-    async validateInternal(val, isExplicit = false) {
-        const runId = ++this.currentRunId;
-        const context = this.formGroup?.getValue() ?? { [this.key]: val };
-        // Required / Early exit
-        if (val.trim() === "") {
-            this.setState("invalid");
-            this.setError("Field is required.");
-            return false;
-        }
-        for (const validator of this.validators) {
-            const rawResult = await Promise.resolve(validator.validate(val, context));
-            const result = typeof rawResult === "boolean"
-                ? { isValid: rawResult, message: rawResult ? undefined : "Invalid input" }
-                : rawResult;
-            if (!result.isValid) {
-                this.setState("invalid");
-                this.setError(result.message ?? "Invalid input");
-                return false;
-            }
-        }
-        if (this.asyncValidators.length > 0 && (isExplicit || this.lastValidatedValue !== val)) {
-            this.setState("validating");
-            this.setError(null);
-            for (const validator of this.asyncValidators) {
-                const result = await validator.validate(val, context);
-                if (this.currentRunId !== runId)
-                    return false;
-                if (!result.isValid) {
-                    this.setState("invalid");
-                    this.setError(result.message ?? "Invalid input");
-                    return false;
-                }
-            }
-            this.lastValidatedValue = val;
-        }
-        this.setState("valid");
-        this.setError(null);
-        return true;
+    setState(newState, error) {
+        this.state = newState;
+        this.errorMessage = error;
+        this.emitState();
     }
-    // --- Getters ---
-    isDirty() {
-        return this.dirty;
+    // Handle debounced value update
+    async handleDebouncedValue(val) {
+        // This is the actual logic that gets debounced
+        if (val === this.lastValidatedValue)
+            return;
+        await this.validateInternal(val);
     }
-    wasTouched() {
-        return this.touched;
-    }
-    isValid() {
-        return this.state === "valid";
-    }
+    // ----------------
+    // Public Accessors
+    // ----------------
     get currentValue() {
         return this.value;
     }
@@ -634,10 +776,19 @@ let ReactiveFormControl = class ReactiveFormControl {
     getError() {
         return this.errorMessage;
     }
+    isDirty() {
+        return this.dirty;
+    }
+    wasTouched() {
+        return this.touched;
+    }
+    isValid() {
+        return this.state === "valid";
+    }
 };
 ReactiveFormControl = __decorate([
     (0,inversify__WEBPACK_IMPORTED_MODULE_0__.injectable)(),
-    __param(0, (0,inversify__WEBPACK_IMPORTED_MODULE_0__.inject)(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_2__.ContainerTypes.FieldStateProvider)),
+    __param(0, (0,inversify__WEBPACK_IMPORTED_MODULE_0__.inject)(_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_3__.ContainerTypes.FieldStateProvider)),
     __metadata("design:paramtypes", [Object])
 ], ReactiveFormControl);
 
@@ -678,6 +829,9 @@ let ReactiveFormGroup = class ReactiveFormGroup {
     getControl(key) {
         return this.controls.get(key);
     }
+    getControlKeys() {
+        return Array.from(this.controls.keys());
+    }
     getValue() {
         const result = {};
         for (const [key, control] of this.controls.entries()) {
@@ -686,17 +840,17 @@ let ReactiveFormGroup = class ReactiveFormGroup {
         return result;
     }
     async validateAll() {
-        const results = await Promise.all(Array.from(this.controls.values()).map(c => c.validate()));
-        return results.every(result => result === true);
+        const results = await Promise.all(Array.from(this.controls.values()).map((c) => c.validate()));
+        return results.every((result) => result === true);
     }
     isValid() {
-        return Array.from(this.controls.values()).every(c => c.isValid());
+        return Array.from(this.controls.values()).every((c) => c.isValid());
     }
     isDirty() {
-        return Array.from(this.controls.values()).some(c => c.isDirty());
+        return Array.from(this.controls.values()).some((c) => c.isDirty());
     }
     wasTouched() {
-        return Array.from(this.controls.values()).some(c => c.wasTouched());
+        return Array.from(this.controls.values()).some((c) => c.wasTouched());
     }
     onDebugUpdate(callback) {
         this.debug$.subscribe(callback);
@@ -710,7 +864,7 @@ let ReactiveFormGroup = class ReactiveFormGroup {
             values: {},
             states: {},
             errors: {},
-            raw: {}
+            raw: {},
         };
         for (const [key, control] of this.controls.entries()) {
             debug.values[key] = control.currentValue;
@@ -982,7 +1136,8 @@ const ContainerTypes = {
     FormGroupFactory: Symbol.for("FormGroupFactory"),
     ReactiveFormBuilder: Symbol.for("ReactiveFormBuilder"),
     ReactiveFormService: Symbol.for("ReactiveFormService"),
-    ReactiveValidatorService: Symbol.for("ReactiveValidatorService")
+    ReactiveValidatorService: Symbol.for("ReactiveValidatorService"),
+    FormBinderBootstrapper: Symbol.for("FormBinderBootstrapper"),
 };
 
 
@@ -1034,6 +1189,34 @@ class Debouncer {
 
 /***/ }),
 
+/***/ "../Core/Utils/ModelParser.ts":
+/*!************************************!*\
+  !*** ../Core/Utils/ModelParser.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   parseModelToFormDefinition: () => (/* binding */ parseModelToFormDefinition)
+/* harmony export */ });
+function parseModelToFormDefinition(model) {
+    const controls = Object.keys(model).map((key) => {
+        const rules = Reflect.getMetadata("validation:rules", model, key) || [];
+        return {
+            key,
+            rules,
+            input: null
+        };
+    });
+    return {
+        form: null,
+        controls
+    };
+}
+
+
+/***/ }),
+
 /***/ "../Core/Utils/SimpleSubject.ts":
 /*!**************************************!*\
   !*** ../Core/Utils/SimpleSubject.ts ***!
@@ -1076,14 +1259,15 @@ class SimpleSubject {
 
 /***/ }),
 
-/***/ "../Core/Validators/RequiredValidator.ts":
-/*!***********************************************!*\
-  !*** ../Core/Validators/RequiredValidator.ts ***!
-  \***********************************************/
+/***/ "../Core/Validators/GlobalValidators.ts":
+/*!**********************************************!*\
+  !*** ../Core/Validators/GlobalValidators.ts ***!
+  \**********************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   EmailValidator: () => (/* binding */ EmailValidator),
 /* harmony export */   MatchesValidator: () => (/* binding */ MatchesValidator),
 /* harmony export */   MaxLengthValidator: () => (/* binding */ MaxLengthValidator),
 /* harmony export */   MinLengthValidator: () => (/* binding */ MinLengthValidator),
@@ -1156,6 +1340,17 @@ class MatchesValidator {
             isValid: false,
             message: this.rule.message || `Value does not match ${matchKey}.`
         };
+    }
+}
+class EmailValidator {
+    rule;
+    constructor(rule) {
+        this.rule = rule;
+    }
+    validate(value) {
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const isValid = emailPattern.test(value);
+        return isValid || { isValid: false, message: this.rule.message || "Invalid email address." };
     }
 }
 
@@ -1290,7 +1485,12 @@ let ReactiveFormService = class ReactiveFormService {
     }
     bootstrapFormDefinition(def) {
         const group = this.groupFactory.create(def);
-        this.formMap.set(def.form, group);
+        if (def.form) {
+            this.formMap.set(def.form, group);
+        }
+        else {
+            console.warn("[ReactiveFormService] Parsed form definition has null form:", def);
+        }
     }
     getFormGroup(form) {
         return this.formMap.get(form) ?? null;
@@ -1327,6 +1527,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var inversify__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! inversify */ "../node_modules/inversify/lib/esm/index.js");
 /* harmony import */ var _Core_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Core/Types/ContainerTypes */ "../Core/Types/ContainerTypes.ts");
+/* harmony import */ var _Core_Utils_ModelParser__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../Core/Utils/ModelParser */ "../Core/Utils/ModelParser.ts");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -1341,15 +1542,18 @@ var __param = (undefined && undefined.__param) || function (paramIndex, decorato
 };
 
 
+
 let ReactiveValidatorService = class ReactiveValidatorService {
     parser;
     controlFactory;
     groupFactory;
+    binder;
     formRegistry = new Map();
-    constructor(parser, controlFactory, groupFactory) {
+    constructor(parser, controlFactory, groupFactory, binder) {
         this.parser = parser;
         this.controlFactory = controlFactory;
         this.groupFactory = groupFactory;
+        this.binder = binder;
     }
     createControlFromRules(key, rules) {
         return this.controlFactory.createControl(key, rules);
@@ -1363,6 +1567,10 @@ let ReactiveValidatorService = class ReactiveValidatorService {
         this.formRegistry.set(form, group);
         return group;
     }
+    registerFormFromModel(model) {
+        const def = (0,_Core_Utils_ModelParser__WEBPACK_IMPORTED_MODULE_2__.parseModelToFormDefinition)(model);
+        return this.groupFactory.create(def);
+    }
     async validateForm(group) {
         return await group.validateAll();
     }
@@ -1372,7 +1580,8 @@ ReactiveValidatorService = __decorate([
     __param(0, (0,inversify__WEBPACK_IMPORTED_MODULE_0__.inject)(_Core_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormParserService)),
     __param(1, (0,inversify__WEBPACK_IMPORTED_MODULE_0__.inject)(_Core_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormControlFactory)),
     __param(2, (0,inversify__WEBPACK_IMPORTED_MODULE_0__.inject)(_Core_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormGroupFactory)),
-    __metadata("design:paramtypes", [Object, Object, Object])
+    __param(3, (0,inversify__WEBPACK_IMPORTED_MODULE_0__.inject)(_Core_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.FormBinderBootstrapper)),
+    __metadata("design:paramtypes", [Object, Object, Object, Object])
 ], ReactiveValidatorService);
 
 
@@ -6592,21 +6801,14 @@ var __webpack_exports__ = {};
   !*** ./main.ts ***!
   \*****************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _Core_DependencyInjection_container_config__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../Core/DependencyInjection/container-config */ "../Core/DependencyInjection/container-config.ts");
-/* harmony import */ var _Core_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Core/Types/ContainerTypes */ "../Core/Types/ContainerTypes.ts");
-/* harmony import */ var reflect_metadata__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! reflect-metadata */ "../node_modules/reflect-metadata/Reflect.js");
-/* harmony import */ var reflect_metadata__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(reflect_metadata__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var reflect_metadata__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! reflect-metadata */ "../node_modules/reflect-metadata/Reflect.js");
+/* harmony import */ var reflect_metadata__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(reflect_metadata__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _Core_Bootstrapper_ReactiveFormBootstrapper__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Core/Bootstrapper/ReactiveFormBootstrapper */ "../Core/Bootstrapper/ReactiveFormBootstrapper.ts");
+ // must come first for Inversify
 
-
-
-const formElement = document.getElementById("registerForm");
-const service = _Core_DependencyInjection_container_config__WEBPACK_IMPORTED_MODULE_0__.container.get(_Core_Types_ContainerTypes__WEBPACK_IMPORTED_MODULE_1__.ContainerTypes.ReactiveValidatorService);
-const group = service.registerForm(formElement);
-formElement.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const isValid = await service.validateForm(group);
-    console.log("Form valid?", isValid);
-});
+// 🧠 Bootstrapper handles everything: registration, binding, validation, and submission
+const bootstrapper = new _Core_Bootstrapper_ReactiveFormBootstrapper__WEBPACK_IMPORTED_MODULE_1__.ReactiveFormBootstrapper("registerForm");
+bootstrapper.bootstrap();
 
 })();
 

@@ -17,5 +17,7 @@ export const ContainerTypes = {
   FormGroupFactory: Symbol.for("FormGroupFactory"),
   ReactiveFormBuilder: Symbol.for("ReactiveFormBuilder"),
   ReactiveFormService: Symbol.for("ReactiveFormService"),
-  ReactiveValidatorService: Symbol.for("ReactiveValidatorService")
+  ReactiveValidatorService: Symbol.for("ReactiveValidatorService"),
+  FormBinderBootstrapper: Symbol.for("FormBinderBootstrapper"),
+
 };

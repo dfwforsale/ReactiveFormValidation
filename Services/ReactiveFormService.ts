@@ -35,7 +35,11 @@ export class ReactiveFormService implements IReactiveFormService {
 
   private bootstrapFormDefinition(def: IParsedFormDefinition): void {
     const group = this.groupFactory.create(def);
-    this.formMap.set(def.form, group);
+    if (def.form) {
+      this.formMap.set(def.form, group);
+    } else {
+      console.warn("[ReactiveFormService] Parsed form definition has null form:", def);
+    }
   }
 
   getFormGroup(form: HTMLFormElement): IReactiveFormGroup | null {
