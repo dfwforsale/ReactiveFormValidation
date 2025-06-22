@@ -6,10 +6,6 @@ import { IValidationRuleConfig } from "../Interfaces/IValidationRuleConfig";
 import { IAsyncValidator } from "../Interfaces/IAsyncValidator";
 import { IAsyncValidationHandler } from "../Interfaces/IAsyncValidationHandler";
 
-
-
-
-
 @injectable()
 export class AsyncValidatorFactory implements IAsyncValidatorFactory {
   constructor(
