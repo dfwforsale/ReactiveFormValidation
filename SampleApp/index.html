@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sample App</title>
+  </head>
+  <body>
+    <h1>Welcome to Sample App</h1>
+
+    <div>
+      <form
+        id="registerForm"
+        data-reactive-form
+        data-validate='{
+  "username": { "required": true, "minLength": 4, "signalr": { "methodName": "CheckUsername" } },
+  "email":    { "required": true, "pattern": { "pattern": "^[^@]+@[^@]+\\.[^@]+$" } },
+  "password": { "required": true, "minLength": 6 },
+  "confirmPassword": { "required": true, "matches": { "field": "password" } }
+}'
+      >
+        <input name="username" placeholder="Username" />
+        <div id="usernameStatus"></div>
+
+        <input name="email" placeholder="Email" />
+        <div id="emailStatus"></div>
+
+        <input name="password" type="password" placeholder="Password" />
+        <div id="passwordStatus"></div>
+
+        <input
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm Password"
+        />
+        <div id="confirmPasswordStatus"></div>
+
+        <button type="submit">Register</button>
+      </form>
+    </div>
+  </body>
+</html>

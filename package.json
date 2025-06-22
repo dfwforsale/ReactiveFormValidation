@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^8.0.7",
+    "inversify": "^7.0.0-alpha.5",
+    "reflect-metadata": "^0.1.13"
+  }
+}

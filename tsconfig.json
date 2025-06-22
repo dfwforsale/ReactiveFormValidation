@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["DOM", "ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": [
+    "reactive-from-validation.ts",
+    "Core/**/*.ts",
+    "Services/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts"
+  ]
+}
